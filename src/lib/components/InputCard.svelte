@@ -1,18 +1,33 @@
 <!-- src/lib/components/InputCard.svelte -->
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { onMount } from 'svelte';
   import type { ConstraintType, LPProblem, ObjectiveType } from '$lib/types';
+  import { pendingLoad } from '$lib/stores/pendingLoad';
 
-  const dispatch = createEventDispatcher<{ solve: LPProblem }>();
+  let { onsolve, onclear }: { onsolve: (p: LPProblem) => void; onclear: () => void } = $props();
 
-  let objective = $state<ObjectiveType>('max');
-  let objectiveCoeffs = $state<number[]>([3, 5]);
-
-  let constraints = $state<{ coeffs: number[]; type: ConstraintType; rhs: number }[]>([
+  const defaultObjectiveCoeffs = [3, 5];
+  const defaultConstraints: { coeffs: number[]; type: ConstraintType; rhs: number }[] = [
     { coeffs: [1, 0], type: '<=', rhs: 4 },
     { coeffs: [0, 2], type: '<=', rhs: 12 },
     { coeffs: [3, 2], type: '<=', rhs: 18 }
-  ]);
+  ];
+
+  let objective = $state<ObjectiveType>('max');
+  let objectiveCoeffs = $state<number[]>([...defaultObjectiveCoeffs]);
+  let constraints = $state(defaultConstraints.map((c) => ({ ...c, coeffs: [...c.coeffs] })));
+
+  onMount(() => {
+    const unsub = pendingLoad.subscribe((problem) => {
+      if (!problem) return;
+      objective = problem.objective;
+      objectiveCoeffs = [...problem.objectiveCoeffs];
+      constraints = problem.constraints.map((c) => ({ ...c, coeffs: [...c.coeffs] }));
+      pendingLoad.set(null);
+      onsolve(problem);
+    });
+    return unsub;
+  });
 
   function addVariable() {
     objectiveCoeffs = [...objectiveCoeffs, 0];
@@ -26,7 +41,7 @@
   }
 
   function addConstraint() {
-    constraints = [...constraints, { coeffs: new Array(objectiveCoeffs.length).fill(0), type: '<=', rhs: 0 }];
+    constraints = [...constraints, { coeffs: new Array(objectiveCoeffs.length).fill(0), type: '<=' as ConstraintType, rhs: 0 }];
   }
 
   function removeConstraint(idx: number) {
@@ -34,16 +49,28 @@
   }
 
   function solve() {
-    dispatch('solve', {
+    onsolve({
       objective,
       objectiveCoeffs: [...objectiveCoeffs],
       constraints: constraints.map((c) => ({ ...c, coeffs: [...c.coeffs] }))
     });
   }
+
+  function clearAll() {
+    objective = 'max';
+    objectiveCoeffs = [0, 0];
+    constraints = [{ coeffs: [0, 0], type: '<=', rhs: 0 }];
+    onclear();
+  }
 </script>
 
 <div class="bg-white rounded-xl shadow-sm p-6">
-  <h2 class="text-lg font-semibold text-gray-800 mb-4">Función Objetivo</h2>
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-semibold text-gray-800">Función Objetivo</h2>
+    <button onclick={clearAll} class="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">
+      Limpiar todo
+    </button>
+  </div>
 
   <div class="flex flex-wrap items-center gap-3 mb-4">
     <select bind:value={objective} class="border border-gray-300 rounded-lg px-3 py-2 text-sm font-medium">
@@ -55,7 +82,7 @@
     {#each objectiveCoeffs as _, i}
       <div class="flex items-center gap-1">
         <input type="number" bind:value={objectiveCoeffs[i]} class="w-16 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
-        <span class="text-sm text-gray-500">x{i + 1}{i < objectiveCoeffs.length - 1 ? ' +' : ''}</span>
+        <span class="text-sm text-gray-500">x<sub>{i + 1}</sub>{i < objectiveCoeffs.length - 1 ? ' +' : ''}</span>
       </div>
     {/each}
 
@@ -71,7 +98,7 @@
         {#each constraint.coeffs as _, vi}
           <div class="flex items-center gap-1">
             <input type="number" bind:value={constraint.coeffs[vi]} class="w-14 border border-gray-300 rounded-md px-2 py-1 text-sm" />
-            <span class="text-xs text-gray-500">x{vi + 1}{vi < constraint.coeffs.length - 1 ? ' +' : ''}</span>
+            <span class="text-xs text-gray-500">x<sub>{vi + 1}</sub>{vi < constraint.coeffs.length - 1 ? ' +' : ''}</span>
           </div>
         {/each}
 

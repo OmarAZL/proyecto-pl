@@ -1,13 +1,10 @@
 <!-- src/lib/components/GraphicalCanvas.svelte -->
 <script lang="ts">
-  import { onMount } from 'svelte';
   import type { GraphicalResult } from '$lib/types';
 
-  let { result = null, numVars = 2 }: { 
-    result?: GraphicalResult | null; 
-    numVars?: number } = $props();
+  let { result, numVars = 2 }: { result: GraphicalResult | null; numVars?: number } = $props();
 
-  let canvas = $state<HTMLCanvasElement | null>(null);
+  let canvas: HTMLCanvasElement | undefined = $state();
   const PADDING = 40;
   const SIZE = 420;
 
@@ -94,10 +91,11 @@
     }
   }
 
-  onMount(draw);
-  $effect( ()=>{
+  $effect(() => {
+    result;
+    numVars;
     draw();
-  })
+  });
 </script>
 
 <div class="bg-white rounded-xl shadow-sm p-6 h-full flex flex-col">
