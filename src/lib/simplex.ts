@@ -1,8 +1,9 @@
 // src/lib/simplex.ts
-import type { Constraint, ConstraintType, LPProblem, SimplexResult, TableauSnapshot } from './types';
+import type { Constraint, ConstraintType, LPProblem, SimplexResult, SolutionKind, TableauSnapshot } from './types';
 
 const BIG_M = 1e6;
 const EPS = 1e-9;
+const DEGEN_EPS = 1e-7;
 const MAX_ITER = 100;
 
 interface ColumnMeta {
@@ -107,6 +108,8 @@ export function solveSimplex(problem: LPProblem): SimplexResult {
   };
 
   let iter = 0;
+  let finalNetEval: number[] = new Array(totalCols).fill(0);
+
   while (iter < MAX_ITER) {
     const zj = new Array(totalCols).fill(0);
     for (let j = 0; j < totalCols; j++) {
@@ -115,6 +118,7 @@ export function solveSimplex(problem: LPProblem): SimplexResult {
       zj[j] = sum;
     }
     const netEval = columns.map((_, j) => cVec[j] - zj[j]);
+    finalNetEval = netEval;
 
     let enterCol = -1;
     let best = EPS;
@@ -185,5 +189,22 @@ export function solveSimplex(problem: LPProblem): SimplexResult {
   let objectiveValue = 0;
   for (let j = 0; j < nOrig; j++) objectiveValue += problem.objectiveCoeffs[j] * solution[j];
 
-  return { tableaus, status, solution, objectiveValue };
-}
+  let solutionKind: SolutionKind;
+  if (status === 'infeasible') {
+    solutionKind = 'infactible';
+  } else if (status === 'unbounded') {
+    solutionKind = 'no-acotada';
+  } else {
+    const isDegenerate = basis.some((b, i) => rhs[i] < DEGEN_EPS && columns[b].kind !== 'artificial');
+    const hasAltOptimal = columns.some((col, j) => {
+      const isBasic = basis.includes(j);
+      return !isBasic && col.kind !== 'artificial' && Math.abs(finalNetEval[j]) < DEGEN_EPS;
+    });
+
+    if (isDegenerate) solutionKind = 'degenerada';
+    else if (hasAltOptimal) solutionKind = 'optima-multiple';
+    else solutionKind = 'optimal-unica';
+  }
+
+  return { tableaus, status, solution, objectiveValue, solutionKind };
+    }
