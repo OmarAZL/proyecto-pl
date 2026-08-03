@@ -1,6 +1,6 @@
 <!-- src/lib/components/SimplexTable.svelte -->
 <script lang="ts">
-  import type { SimplexResult } from '$lib/types';
+  import type { SimplexResult, SolutionKind } from '$lib/types';
 
   let { result }: { result: SimplexResult | null } = $props();
 
@@ -20,6 +20,22 @@
     if (match) return { letter: match[1], sub: match[2] };
     return { letter: label, sub: '' };
   }
+
+  const kindLabels: Record<SolutionKind, string> = {
+    'optimal-unica': 'Óptima única',
+    'optima-multiple': 'Óptima múltiple (soluciones alternas)',
+    degenerada: 'Degenerada',
+    'no-acotada': 'No acotada',
+    infactible: 'Infactible'
+  };
+
+  const kindStyles: Record<SolutionKind, string> = {
+    'optimal-unica': 'bg-green-50 text-green-800',
+    'optima-multiple': 'bg-indigo-50 text-indigo-800',
+    degenerada: 'bg-amber-50 text-amber-800',
+    'no-acotada': 'bg-red-50 text-red-800',
+    infactible: 'bg-red-50 text-red-800'
+  };
 </script>
 
 <div class="bg-white rounded-xl shadow-sm p-6 h-full overflow-auto">
@@ -79,8 +95,12 @@
       </div>
     {/each}
 
+    <div class="mt-4 p-3 rounded-lg text-sm font-medium {kindStyles[result.solutionKind]}">
+      Tipo de solución: {kindLabels[result.solutionKind]}
+    </div>
+
     {#if result.status === 'optimal'}
-      <div class="mt-4 p-3 rounded-lg bg-green-50 text-green-800 text-sm">
+      <div class="mt-3 p-3 rounded-lg bg-green-50 text-green-800 text-sm">
         <p class="font-semibold mb-1">Solución óptima</p>
         {#each result.solution as val, i}
           <span class="mr-3">x<sub>{i + 1}</sub> = {val.toFixed(3)}</span>
