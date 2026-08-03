@@ -26,11 +26,14 @@ export interface TableauSnapshot {
   pivotCol: number | null;
 }
 
+export type SolutionKind = 'optimal-unica' | 'optima-multiple' | 'degenerada' | 'no-acotada' | 'infactible';
+
 export interface SimplexResult {
   tableaus: TableauSnapshot[];
   status: 'optimal' | 'unbounded' | 'infeasible';
   solution: number[];
   objectiveValue: number;
+  solutionKind: SolutionKind;
 }
 
 export interface Point2D {
