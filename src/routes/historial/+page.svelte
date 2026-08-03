@@ -3,6 +3,15 @@
   import { history } from '$lib/stores/history';
   import { goto } from '$app/navigation';
   import { pendingLoad } from '$lib/stores/pendingLoad';
+  import type { SolutionKind } from '$lib/types';
+
+  const kindLabels: Record<SolutionKind, string> = {
+    'optimal-unica': 'Óptima única',
+    'optima-multiple': 'Óptima múltiple',
+    degenerada: 'Degenerada',
+    'no-acotada': 'No acotada',
+    infactible: 'Infactible'
+  };
 
   function loadEntry(id: string) {
     const entry = $history.find((e) => e.id === id);
@@ -60,6 +69,7 @@
             {/each}
           </p>
           <p class="text-xs text-gray-500">{entry.problem.constraints.length} restricciones</p>
+          <p class="text-xs font-medium text-gray-500">{kindLabels[entry.simplexResult.solutionKind]}</p>
           <p class="text-sm font-medium {entry.simplexResult.status === 'optimal' ? 'text-green-600' : 'text-amber-600'}">
             {entry.simplexResult.status === 'optimal'
               ? `Z = ${entry.simplexResult.objectiveValue.toFixed(3)}`
