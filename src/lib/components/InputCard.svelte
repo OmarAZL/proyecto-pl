@@ -1,10 +1,13 @@
 <!-- src/lib/components/InputCard.svelte -->
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { ConstraintType, LPProblem, ObjectiveType } from '$lib/types';
+  import type { ConstraintType, LPProblem, ObjectiveType, SimplexMethod } from '$lib/types';
   import { pendingLoad } from '$lib/stores/pendingLoad';
 
-  let { onsolve, onclear }: { onsolve: (p: LPProblem) => void; onclear: () => void } = $props();
+  let {
+    onsolve,
+    onclear
+  }: { onsolve: (p: LPProblem, method: SimplexMethod) => void; onclear: () => void } = $props();
 
   const defaultObjectiveCoeffs = [3, 5];
   const defaultConstraints: { coeffs: number[]; type: ConstraintType; rhs: number }[] = [
@@ -16,15 +19,17 @@
   let objective = $state<ObjectiveType>('max');
   let objectiveCoeffs = $state<number[]>([...defaultObjectiveCoeffs]);
   let constraints = $state(defaultConstraints.map((c) => ({ ...c, coeffs: [...c.coeffs] })));
+  let method = $state<SimplexMethod>('gran-m');
 
   onMount(() => {
-    const unsub = pendingLoad.subscribe((problem) => {
-      if (!problem) return;
-      objective = problem.objective;
-      objectiveCoeffs = [...problem.objectiveCoeffs];
-      constraints = problem.constraints.map((c) => ({ ...c, coeffs: [...c.coeffs] }));
+    const unsub = pendingLoad.subscribe((pending) => {
+      if (!pending) return;
+      objective = pending.problem.objective;
+      objectiveCoeffs = [...pending.problem.objectiveCoeffs];
+      constraints = pending.problem.constraints.map((c) => ({ ...c, coeffs: [...c.coeffs] }));
+      method = pending.method;
       pendingLoad.set(null);
-      onsolve(problem);
+      onsolve(pending.problem, pending.method);
     });
     return unsub;
   });
@@ -49,11 +54,14 @@
   }
 
   function solve() {
-    onsolve({
-      objective,
-      objectiveCoeffs: [...objectiveCoeffs],
-      constraints: constraints.map((c) => ({ ...c, coeffs: [...c.coeffs] }))
-    });
+    onsolve(
+      {
+        objective,
+        objectiveCoeffs: [...objectiveCoeffs],
+        constraints: constraints.map((c) => ({ ...c, coeffs: [...c.coeffs] }))
+      },
+      method
+    );
   }
 
   function clearAll() {
@@ -70,6 +78,18 @@
     <button onclick={clearAll} class="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">
       Limpiar todo
     </button>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-4 mb-4">
+    <span class="text-sm font-medium text-gray-700">Método de resolución:</span>
+    <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+      <input type="radio" bind:group={method} value="gran-m" class="accent-blue-700" />
+      Gran M
+    </label>
+    <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+      <input type="radio" bind:group={method} value="dos-fases" class="accent-blue-700" />
+      Dos Fases
+    </label>
   </div>
 
   <div class="flex flex-wrap items-center gap-3 mb-4">

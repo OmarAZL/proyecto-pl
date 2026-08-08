@@ -36,22 +36,55 @@
     'no-acotada': 'bg-red-50 text-red-800',
     infactible: 'bg-red-50 text-red-800'
   };
+
+  function phaseHeading(phase: 1 | 2): string {
+    return phase === 1
+      ? 'Fase I — minimizar W (suma de variables artificiales)'
+      : 'Fase II — optimizar la función objetivo original';
+  }
+
+  function isNewPhaseHeader(idx: number): boolean {
+    if (!result) return false;
+    const t = result.tableaus[idx];
+    if (t.phase === undefined) return false;
+    const prev = idx > 0 ? result.tableaus[idx - 1] : null;
+    return !prev || prev.phase !== t.phase;
+  }
 </script>
 
 <div class="bg-white rounded-xl shadow-sm p-6 h-full overflow-auto">
-  <h2 class="text-lg font-semibold text-gray-800 mb-4">Método Simplex</h2>
+  <h2 class="text-lg font-semibold text-gray-800 mb-4">
+    {result?.method === 'dos-fases' ? 'Método de las Dos Fases' : 'Método Simplex (Gran M)'}
+  </h2>
 
   {#if !result}
     <p class="text-sm text-gray-400">Ingresa los datos y presiona "Calcular".</p>
   {:else}
+    {#if result.method === 'dos-fases' && result.phase1Skipped}
+      <p class="text-xs text-gray-500 mb-3">
+        No se necesitaron variables artificiales, así que la Fase I no aplica y se resuelve
+        directamente en la Fase II.
+      </p>
+    {/if}
+
     {#if result.status === 'infeasible'}
-      <p class="text-sm text-red-600 font-medium mb-3">El problema no tiene solución factible.</p>
+      <p class="text-sm text-red-600 font-medium mb-3">
+        El problema no tiene solución factible.
+        {#if result.method === 'dos-fases'}
+          La Fase I no logra anular las variables artificiales (W &gt; 0).
+        {/if}
+      </p>
     {:else if result.status === 'unbounded'}
       <p class="text-sm text-amber-600 font-medium mb-3">El problema es no acotado.</p>
     {/if}
 
-    {#each result.tableaus as t}
+    {#each result.tableaus as t, tIdx}
       {@const order = orderedIndices(t.colLabels)}
+      {#if isNewPhaseHeader(tIdx)}
+        <p class="text-sm font-semibold text-blue-800 bg-blue-50 rounded-lg px-3 py-1.5 mb-3 mt-2">
+          {phaseHeading(t.phase as 1 | 2)}
+        </p>
+      {/if}
       <div class="mb-6">
         <p class="text-xs font-semibold text-gray-500 mb-2">Iteración {t.iteration}</p>
         <div class="overflow-x-auto">
@@ -60,8 +93,8 @@
               <tr class="bg-gray-50">
                 <th class="border border-gray-200 px-2 py-1">VB</th>
                 <th class="border border-gray-200 px-2 py-1">Z</th>
-                {#each order as idx}
-                  {@const parts = splitLabel(t.colLabels[idx])}
+                {#each order as colIdx}
+                  {@const parts = splitLabel(t.colLabels[colIdx])}
                   <th class="border border-gray-200 px-2 py-1">{parts.letter}{#if parts.sub}<sub>{parts.sub}</sub>{/if}</th>
                 {/each}
                 <th class="border border-gray-200 px-2 py-1">Sol</th>
@@ -71,8 +104,8 @@
               <tr class="bg-gray-50 font-medium">
                 <td class="border border-gray-200 px-2 py-1">Z</td>
                 <td class="border border-gray-200 px-2 py-1 text-center">1</td>
-                {#each order as idx}
-                  <td class="border border-gray-200 px-2 py-1 text-center">{(-t.netEvalRow[idx]).toFixed(2)}</td>
+                {#each order as colIdx}
+                  <td class="border border-gray-200 px-2 py-1 text-center">{(-t.netEvalRow[colIdx]).toFixed(2)}</td>
                 {/each}
                 <td class="border border-gray-200 px-2 py-1 text-center">{t.zValue.toFixed(2)}</td>
               </tr>
@@ -81,9 +114,9 @@
                 <tr class={t.pivotRow === i ? 'bg-blue-50' : ''}>
                   <td class="border border-gray-200 px-2 py-1 font-medium">{bParts.letter}{#if bParts.sub}<sub>{bParts.sub}</sub>{/if}</td>
                   <td class="border border-gray-200 px-2 py-1 text-center">0</td>
-                  {#each order as idx}
-                    <td class="border border-gray-200 px-2 py-1 text-center {t.pivotCol === idx ? 'font-semibold text-blue-700' : ''}">
-                      {row[idx].toFixed(2)}
+                  {#each order as colIdx}
+                    <td class="border border-gray-200 px-2 py-1 text-center {t.pivotCol === colIdx ? 'font-semibold text-blue-700' : ''}">
+                      {row[colIdx].toFixed(2)}
                     </td>
                   {/each}
                   <td class="border border-gray-200 px-2 py-1 text-center">{t.rhs[i].toFixed(2)}</td>

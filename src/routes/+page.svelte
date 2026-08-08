@@ -3,18 +3,18 @@
   import InputCard from '$lib/components/InputCard.svelte';
   import SimplexTable from '$lib/components/SimplexTable.svelte';
   import GraphicalCanvas from '$lib/components/GraphicalCanvas.svelte';
-  import { solveSimplex } from '$lib/simplex';
+  import { solveSimplex, solveTwoPhase } from '$lib/simplex';
   import { solveGraphical } from '$lib/graphical';
   import { history } from '$lib/stores/history';
-  import type { GraphicalResult, LPProblem, SimplexResult } from '$lib/types';
+  import type { GraphicalResult, LPProblem, SimplexMethod, SimplexResult } from '$lib/types';
 
   let simplexResult = $state<SimplexResult | null>(null);
   let graphicalResult = $state<GraphicalResult | null>(null);
   let numVars = $state(2);
 
-  function handleSolve(problem: LPProblem) {
+  function handleSolve(problem: LPProblem, method: SimplexMethod) {
     numVars = problem.objectiveCoeffs.length;
-    simplexResult = solveSimplex(problem);
+    simplexResult = method === 'dos-fases' ? solveTwoPhase(problem) : solveSimplex(problem);
     graphicalResult = numVars === 2 ? solveGraphical(problem) : null;
 
     history.add({

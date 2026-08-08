@@ -16,7 +16,7 @@
   function loadEntry(id: string) {
     const entry = $history.find((e) => e.id === id);
     if (!entry) return;
-    pendingLoad.set(entry.problem);
+    pendingLoad.set({ problem: entry.problem, method: entry.simplexResult.method });
     goto('/');
   }
 
@@ -54,6 +54,13 @@
           <div class="flex items-center justify-between">
             <span class="text-xs text-gray-400">{new Date(entry.timestamp).toLocaleString()}</span>
             <div class="flex items-center gap-2">
+              <span
+                class="text-xs px-2 py-0.5 rounded-full font-medium {entry.simplexResult.method === 'dos-fases'
+                  ? 'bg-purple-100 text-purple-700'
+                  : 'bg-slate-100 text-slate-700'}"
+              >
+                {entry.simplexResult.method === 'dos-fases' ? 'Dos Fases' : 'Gran M'}
+              </span>
               {#if entry.count > 1}
                 <span class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
                   ×{entry.count}

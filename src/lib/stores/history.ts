@@ -1,6 +1,6 @@
 // src/lib/stores/history.ts
 import { writable } from 'svelte/store';
-import type { LPProblem, SimplexResult, GraphicalResult } from '$lib/types';
+import type { LPProblem, SimplexResult, GraphicalResult, SimplexMethod } from '$lib/types';
 
 export interface HistoryEntry {
   id: string;
@@ -11,11 +11,12 @@ export interface HistoryEntry {
   graphicalResult: GraphicalResult | null;
 }
 
-function signature(p: LPProblem): string {
+function signature(p: LPProblem, method: SimplexMethod): string {
   return JSON.stringify({
     objective: p.objective,
     objectiveCoeffs: p.objectiveCoeffs,
-    constraints: p.constraints
+    constraints: p.constraints,
+    method
   });
 }
 
@@ -35,8 +36,10 @@ function createHistoryStore() {
     subscribe,
     add(entry: Omit<HistoryEntry, 'id' | 'timestamp' | 'count'>) {
       update((entries) => {
-        const sig = signature(entry.problem);
-        const existingIdx = entries.findIndex((e) => signature(e.problem) === sig);
+        const sig = signature(entry.problem, entry.simplexResult.method);
+        const existingIdx = entries.findIndex(
+          (e) => signature(e.problem, e.simplexResult.method) === sig
+        );
 
         let next: HistoryEntry[];
         if (existingIdx !== -1) {
